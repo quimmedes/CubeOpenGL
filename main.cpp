@@ -134,22 +134,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     const char* vertexShaderSource =
         "#version 420 core\n"
         "layout (location = 0) in vec3 aPos;\n"
-        "layout (location = 1) in vec3 aColor;\n"
-        "out vec3 Color;\n"
+        "layout (location = 1) in vec3 aNormal;\n"
+        "out vec3 Normal;\n"
+        "out vec3 FragPos;\n"
         "uniform mat4 model;\n"
         "uniform mat4 view;\n"
         "uniform mat4 projection;\n"
         "void main(){\n"
-        "   Color = aColor;\n"
+        "   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+        "   Normal = mat3(transpose(inverse(model))) * aNormal;\n"
         "   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
         "}\n";
 
     const char* fragmentShaderSource =
         "#version 420 core\n"
-        "in vec3 Color;\n"
+        "in vec3 Normal;\n"
+        "in vec3 FragPos;\n"
         "out vec4 FragColor;\n"
         "void main(){\n"
-        "   FragColor = vec4(Color, 1.0);\n"
+        "   vec3 norm = normalize(Normal);\n"
+        "   vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));\n"
+        "   float diff = max(dot(norm, lightDir), 0.0);\n"
+        "   vec3 diffuse = diff * vec3(1.0, 0.8, 0.6);\n"
+        "   vec3 ambient = vec3(0.2, 0.2, 0.2);\n"
+        "   FragColor = vec4(diffuse + ambient, 1.0);\n"
         "}\n";
 
     // Compilar vertex shader
@@ -268,7 +276,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     DWORD lastTime = GetTickCount64();
     int frameCount = 0;
     double fps = 0.0f;
-    char fpsText[64];
+    char fpsText[64] = "";
 
     // Esconde cursor e captura mouse
     RECT winRect;
@@ -354,7 +362,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 
         glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f/600.0f, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), 1940.0f/1080.0f, 0.1f, 1000.0f);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
