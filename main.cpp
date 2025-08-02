@@ -261,7 +261,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     }
 
     // Variáveis da câmera
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 10.0f);
     glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
     float yaw = -90.0f, pitch = 0.0f;
@@ -295,7 +295,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     while (msg.message != WM_QUIT)
     {
         QueryPerformanceCounter(&currentFrameTime);
-        float deltaTime = float(currentFrameTime.QuadPart - prevFrameTime.QuadPart) / freq.QuadPart;
+        double deltaTime = double(currentFrameTime.QuadPart - prevFrameTime.QuadPart) / freq.QuadPart;
         prevFrameTime = currentFrameTime;
 
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -340,19 +340,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
             SHORT d = GetAsyncKeyState('D');
             glm::vec3 move(0.0f);
             if (w & 0x8000)
-                move += cameraFront * cameraSpeed * deltaTime;
+                move += cameraFront * cameraSpeed * (float)deltaTime;
             if (s & 0x8000)
-                move -= cameraFront * cameraSpeed * deltaTime;
+                move -= cameraFront * cameraSpeed * (float)deltaTime;
             if (a & 0x8000)
-                move -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+                move -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * (float)deltaTime;
             if (d & 0x8000)
-                move += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+                move += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * (float)deltaTime;
             SHORT e = GetAsyncKeyState('E');
             SHORT q = GetAsyncKeyState('Q');
             if (e & 0x8000)
-                move += cameraUp * cameraSpeed * deltaTime;
+                move += cameraUp * cameraSpeed * (float)deltaTime;
             if (q & 0x8000)
-                move -= cameraUp * cameraSpeed * deltaTime;
+                move -= cameraUp * cameraSpeed * (float)deltaTime;
             if (glm::length(move) > 0.0f)
                 cameraPos += move;
             TranslateMessage(&msg);
@@ -374,7 +374,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+
+        meshTransforms[0].position.x += 0.5f * (float)deltaTime; // Atualiza a posição da mesh cavalry.glb
+        meshTransforms[1].position.x -= 0.5f * (float)deltaTime; // Atualiza a posição da mesh mulher.obj	
+
+
+
         for (size_t i = 0; i < vaos.size(); ++i) {
+
+          
+            
             glm::mat4 meshModel = model;
             meshModel = glm::translate(meshModel, meshTransforms[i].position);
             meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.x), glm::vec3(1,0,0));
