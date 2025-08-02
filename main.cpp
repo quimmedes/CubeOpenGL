@@ -125,6 +125,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     // Habilitar teste de profundidade
     glEnable(GL_DEPTH_TEST);
 
+    // Desabilitar VSync (se possível)
+    typedef BOOL (WINAPI *PFNWGLSWAPINTERVALEXTPROC)(int);
+    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
+    if (wglSwapIntervalEXT) wglSwapIntervalEXT(0);
+
     // Definir código fonte dos shaders
     const char* vertexShaderSource =
         "#version 420 core\n"
@@ -173,7 +178,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         "cavalry.glb",
         "mulher.obj",
         "SK_HornedKnight_F_01.fbx",
-        "teste.fbx"
+        "teste.fbx",
+        "cenario.fbx"
     };
     const int meshFileCount = sizeof(meshFiles) / sizeof(meshFiles[0]);
     // Configuração de transformação para cada mesh
@@ -186,7 +192,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         { glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // cavalry.glb
         { glm::vec3(2,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // mulher.obj
         { glm::vec3(-2,0,0), glm::vec3(0,0,0), glm::vec3(0.01f,0.01f,0.01f) }, // SK_HornedKnight_F_01.fbx
-        { glm::vec3(0,2,0), glm::vec3(0,0,0), glm::vec3(1,1,1) } // teste.fbx
+        { glm::vec3(0,2,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // teste.fbx
+        { glm::vec3(0,-2,0), glm::vec3(0,0,0), glm::vec3(2,2,2) } // cenario.fbx
         
     };
     std::vector<GLuint> vaos, ebos;
@@ -245,49 +252,153 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         indexCounts.push_back((GLsizei)indices.size());
     }
 
+    // Variáveis da câmera
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    float yaw = -90.0f, pitch = 0.0f;
+    POINT lastMousePos;
+    bool firstMouse = true;
+    float cameraSpeed = 30.0f;
+    LARGE_INTEGER freq, prevFrameTime, currentFrameTime;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&prevFrameTime);
+
+    // FPS
+    DWORD lastTime = GetTickCount64();
+    int frameCount = 0;
+    double fps = 0.0f;
+    char fpsText[64];
+
+    // Esconde cursor e captura mouse
+    RECT winRect;
+    ShowCursor(FALSE);
+    GetClientRect(hWnd, &winRect);
+    POINT center;
+    center.x = (winRect.right - winRect.left) / 2;
+    center.y = (winRect.bottom - winRect.top) / 2;
+    ClientToScreen(hWnd, &center);
+    SetCursorPos(center.x, center.y);
+    lastMousePos = center;
+
     // Loop principal
     MSG msg = {};
     float angle = 0.0f;
     while (msg.message != WM_QUIT)
     {
-        if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+        QueryPerformanceCounter(&currentFrameTime);
+        float deltaTime = float(currentFrameTime.QuadPart - prevFrameTime.QuadPart) / freq.QuadPart;
+        prevFrameTime = currentFrameTime;
+
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
+            if (msg.message == WM_MOUSEMOVE)
+            {
+                POINT p;
+                GetCursorPos(&p);
+                RECT winRect;
+                GetClientRect(hWnd, &winRect);
+                POINT center;
+                center.x = (winRect.right - winRect.left) / 2;
+                center.y = (winRect.bottom - winRect.top) / 2;
+                ClientToScreen(hWnd, &center);
+
+                float xoffset = float(p.x - center.x);
+                float yoffset = float(center.y - p.y);
+
+                if (!firstMouse) {
+                    float sensitivity = 0.15f;
+                    xoffset *= sensitivity;
+                    yoffset *= sensitivity;
+
+                    yaw += xoffset;
+                    pitch += yoffset;
+                    if (pitch > 89.0f) pitch = 89.0f;
+                    if (pitch < -89.0f) pitch = -89.0f;
+
+                    glm::vec3 front;
+                    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+                    front.y = sin(glm::radians(pitch));
+                    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+                    cameraFront = glm::normalize(front);
+                }
+                firstMouse = false;
+                SetCursorPos(center.x, center.y);
+            }
+            // Movimento suave com base no deltaTime
+            SHORT w = GetAsyncKeyState('W');
+            SHORT s = GetAsyncKeyState('S');
+            SHORT a = GetAsyncKeyState('A');
+            SHORT d = GetAsyncKeyState('D');
+            glm::vec3 move(0.0f);
+            if (w & 0x8000)
+                move += cameraFront * cameraSpeed * deltaTime;
+            if (s & 0x8000)
+                move -= cameraFront * cameraSpeed * deltaTime;
+            if (a & 0x8000)
+                move -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+            if (d & 0x8000)
+                move += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+            SHORT e = GetAsyncKeyState('E');
+            SHORT q = GetAsyncKeyState('Q');
+            if (e & 0x8000)
+                move += cameraUp * cameraSpeed * deltaTime;
+            if (q & 0x8000)
+                move -= cameraUp * cameraSpeed * deltaTime;
+            if (glm::length(move) > 0.0f)
+                cameraPos += move;
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        else
-        {
-            angle += 0.01f;
-            glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.5f, 1.0f, 0.0f));
-            glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
-            glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f/600.0f, 0.1f, 100.0f);
+        angle += 0.01f;
 
-            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f/600.0f, 0.1f, 100.0f);
 
-            glUseProgram(shaderProgram);
-            GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-            GLint viewLoc  = glGetUniformLocation(shaderProgram, "view");
-            GLint projLoc  = glGetUniformLocation(shaderProgram, "projection");
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            for (size_t i = 0; i < vaos.size(); ++i) {
-                glm::mat4 meshModel = model;
-                meshModel = glm::translate(meshModel, meshTransforms[i].position);
-                meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.x), glm::vec3(1,0,0));
-                meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.y), glm::vec3(0,1,0));
-                meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.z), glm::vec3(0,0,1));
-                meshModel = glm::scale(meshModel, meshTransforms[i].scale);
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(meshModel));
-                glBindVertexArray(vaos[i]);
-                glDrawElements(GL_TRIANGLES, indexCounts[i], GL_UNSIGNED_INT, 0);
-            }
+        glUseProgram(shaderProgram);
+        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+        GLint viewLoc  = glGetUniformLocation(shaderProgram, "view");
+        GLint projLoc  = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-            SwapBuffers(hDCGlobal);
+        for (size_t i = 0; i < vaos.size(); ++i) {
+            glm::mat4 meshModel = model;
+            meshModel = glm::translate(meshModel, meshTransforms[i].position);
+            meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.x), glm::vec3(1,0,0));
+            meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.y), glm::vec3(0,1,0));
+            meshModel = glm::rotate(meshModel, glm::radians(meshTransforms[i].rotation.z), glm::vec3(0,0,1));
+            meshModel = glm::scale(meshModel, meshTransforms[i].scale);
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(meshModel));
+            glBindVertexArray(vaos[i]);
+            glDrawElements(GL_TRIANGLES, indexCounts[i], GL_UNSIGNED_INT, 0);
         }
+
+        // FPS calculation
+        frameCount++;
+        DWORD now = GetTickCount64();
+        if (now - lastTime >= 1000) {
+            fps = frameCount * 1000.0f / double(now - lastTime);
+            frameCount = 0;
+            lastTime = now;
+            sprintf(fpsText, "FPS: %.1f", fps);
+            SetWindowTextA(hWnd, fpsText);
+        }
+
+        // Desenhar FPS no canto superior esquerdo (GDI)
+        HDC hdc = GetDC(hWnd);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(255,255,0));
+        TextOutA(hdc, 10, 10, fpsText, (int)strlen(fpsText));
+        ReleaseDC(hWnd, hdc);
+
+        SwapBuffers(hDCGlobal);
     }
+    ShowCursor(TRUE);
 
     // Libera recursos
     for (size_t i = 0; i < vaos.size(); ++i) {
