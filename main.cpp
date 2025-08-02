@@ -157,7 +157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         "   float diff = max(dot(norm, lightDir), 0.0);\n"
         "   vec3 diffuse = diff * vec3(1.0, 0.8, 0.6);\n"
         "   vec3 ambient = vec3(0.2, 0.2, 0.2);\n"
-        "   FragColor = vec4(diffuse + ambient, 1.0);\n"
+        "   FragColor = vec4(Normal,1.0) +  vec4(diffuse + ambient, 1.0);\n"
         "}\n";
 
     // Compilar vertex shader
@@ -199,7 +199,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     MeshTransform meshTransforms[] = {
         { glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // cavalry.glb
         { glm::vec3(2,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // mulher.obj
-        { glm::vec3(-2,0,0), glm::vec3(0,0,0), glm::vec3(0.01f,0.01f,0.01f) }, // SK_HornedKnight_F_01.fbx
+        { glm::vec3(0,0,-6), glm::vec3(0,0,0), glm::vec3(0.01f,0.01f,0.01f) }, // SK_HornedKnight_F_01.fbx
         { glm::vec3(0,2,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // teste.fbx
         { glm::vec3(0,-2,0), glm::vec3(0,0,0), glm::vec3(2,2,2) } // cenario.fbx
         
