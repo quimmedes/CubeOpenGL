@@ -185,9 +185,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     const char* meshFiles[] = {
         "cavalry.glb",
         "mulher.obj",
-        "SK_HornedKnight_F_01.fbx",
         "teste.fbx",
-        "cenario.fbx"
+        "scene.gltf"
     };
     const int meshFileCount = sizeof(meshFiles) / sizeof(meshFiles[0]);
     // Configuração de transformação para cada mesh
@@ -199,9 +198,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     MeshTransform meshTransforms[] = {
         { glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // cavalry.glb
         { glm::vec3(2,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // mulher.obj
-        { glm::vec3(0,0,-6), glm::vec3(0,0,0), glm::vec3(0.01f,0.01f,0.01f) }, // SK_HornedKnight_F_01.fbx
         { glm::vec3(0,2,0), glm::vec3(0,0,0), glm::vec3(1,1,1) }, // teste.fbx
-        { glm::vec3(0,-2,0), glm::vec3(0,0,0), glm::vec3(2,2,2) } // cenario.fbx
+        { glm::vec3(0,-50,0), glm::vec3(0,0,0), glm::vec3(1,1,1) } // cenario.fbx
         
     };
     std::vector<GLuint> vaos, ebos;
@@ -375,8 +373,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 
-        meshTransforms[0].position.x += 0.5f * (float)deltaTime; // Atualiza a posição da mesh cavalry.glb
-        meshTransforms[1].position.x -= 0.5f * (float)deltaTime; // Atualiza a posição da mesh mulher.obj	
+      //  meshTransforms[0].position.x += 0.5f * (float)deltaTime; // Atualiza a posição da mesh cavalry.glb
+       // meshTransforms[1].position.x -= 0.5f * (float)deltaTime; // Atualiza a posição da mesh mulher.obj	
 
 
 
